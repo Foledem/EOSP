@@ -2,7 +2,7 @@
 
 ## Description
 
-**EOSP ThreadPool** is a header-only templated thread pool writtent in c++17. It is designed to be easy to use while being able to execute any type of function. You only need two functions to use the thread pool. `addTask()`to add a function to execute and `waitForTask()` to wait the task is done.
+**EOSP ThreadPool** is a header-only templated thread pool writtent in c++17. It is designed to be easy to use while being able to execute any type of function. You only need two functions to use the thread pool. `addTask()`to add a function to execute and `waitForTask()` to get the return value and wait the task is done.
 When threads are waiting for a result from other threads they compute new functions from the task pool until the result they need is available.
 
 ## Exemple
@@ -47,6 +47,6 @@ Since threads start to work on new tasks to wait before they return the first ta
 
 `ThreadPool(nbrThread, depth)` creates a thread pool with `nbrThread` thread (default value is the number of CPU threads) And `depth` the maximum recursion depth which defines the number of times an unfinished task can start a new one to wait (default value is 5).
 
-`addTask(fct, param)` adds a function `fct` with `param` as parameter to the pool to be compute. There can be no parameter, one or more. `addTask()` return an `std::future<T>` where T is the return type of the `fct`function.
+`addTask(fct, param)` adds a function `fct` with `param` as parameter to the pool to be compute. There can be no parameter, one or more. `addTask()` return an `std::future<T>` where T is the return type of `fct`function.
 
-`WaitForTask(fut)` waits the task is done and return its return value if there is one. It has the same return type as `fct` or no return type if `fct` is a void function.
+`WaitForTask(fut)` waits the task is done if it isn't yet and return its return value if there is one. It has the same return type as `fct` or no return type if `fct` is a void function.

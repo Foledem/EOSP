@@ -6,7 +6,7 @@
 #include <future>
 #include <map>
 #include <mutex>
-#include <stack>
+#include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -105,7 +105,7 @@ private:
             return;
         }
 
-        std::function<void()> task = std::move((taskFrame.taskQueue.top()));//else take one in the queue
+        std::function<void()> task = std::move((taskFrame.taskQueue.front()));//else take one in the queue
         taskFrame.taskQueue.pop();
         lock.unlock();
         RecursionMap.find(std::hash<std::thread::id>()(std::this_thread::get_id()))->second ++;//increment recursion
@@ -134,7 +134,7 @@ private:
 
     struct {
     std::mutex mtx;
-    std::stack<std::function<void()>> taskQueue;
+    std::queue<std::function<void()>> taskQueue;//FIFO logic
     } taskFrame;
 
     std::vector<std::thread> workers;
