@@ -6,6 +6,7 @@
 #include <future>
 #include <unordered_map>
 #include <mutex>
+#include <deque>
 #include <queue>
 #include <thread>
 #include <utility>
@@ -43,10 +44,17 @@ public:
     template <typename F, typename...Args>
     std::future<typename std::result_of<F(Args...)>::type> addTask(F&& f, Args&&... args)
     {
+        int priority = 0;
+        return addTask(priority, std::forward<F>(f), std::forward<Args>(args)...);
+    }
+
+    template <typename F, typename...Args>
+    std::future<typename std::result_of<F(Args...)>::type> addTask(int priority, F&& f, Args&&... args)
+    {
         using ReturnType = typename std::result_of<F(Args...)>::type;
 
         if(stop)
-            return{};
+            return{};// Default value for void or other types
 
         if(RecursionMap[std::this_thread::get_id()] < maxRecursion)//if recursion isn't too deep
         {
@@ -57,7 +65,7 @@ public:
             std::future<ReturnType> result = pFunc->get_future();
             {
                 std::lock_guard<std::mutex> lock(taskFrame.mtx);
-                taskFrame.taskQueue.emplace(func);//add task in queue
+                taskFrame.taskQueue.emplace(std::make_pair(priority, func));//add task in queue
                 cv.notify_one();
             }
             return result;
@@ -76,7 +84,7 @@ public:
             }
             return result.get_future();
         }
-}
+    }
 
     template <typename T>
     T waitForTask(std::future<T>& fut)
@@ -107,7 +115,7 @@ private:
         }
         else
         {
-            std::function<void()> task = std::move((taskFrame.taskQueue.front()));//else take one in the queue
+            std::function<void()> task = std::move((taskFrame.taskQueue.top().second));//else take one in the queue
             taskFrame.taskQueue.pop();
             lock.unlock();
 
@@ -129,6 +137,14 @@ private:
         };
     }
 
+    struct comparePriority
+    {
+        bool operator()(const std::pair<int, std::function<void()>>& p1, const std::pair<int, std::function<void()>>& p2) const
+        {
+            return p1.first < p2.first;
+        }
+    };
+
 private:
 
     std::atomic<bool> stop {false};
@@ -137,8 +153,8 @@ private:
     std::condition_variable cv;
 
     struct {
-    std::mutex mtx;
-    std::queue<std::function<void()>> taskQueue;//FIFO logic
+        std::mutex mtx;
+        std::priority_queue<std::pair<int, std::function<void()>>, std::deque<std::pair<int, std::function<void()>>>, comparePriority> taskQueue;   //Priority(tasks with higher priority values should be executed first) with FIFO default logic
     } taskFrame;
 
     std::vector<std::thread> workers;
